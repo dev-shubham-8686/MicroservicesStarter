@@ -30,6 +30,14 @@ This solution consists of the following microservices:
 - .NET 8 SDK (for local development)
 - Visual Studio 2022 or VS Code (optional)
 
+## 📚 Documentation
+
+- **[Complete Docker & Architecture Guide](DOCKER_GUIDE.md)** - Comprehensive guide covering Docker fundamentals, Dockerfiles, Docker Compose, architecture, configuration, and troubleshooting (Beginner to Advanced)
+- **[Docker Quick Reference](DOCKER_QUICK_REFERENCE.md)** - Quick reference card for common Docker commands and configurations
+- **[Architecture Overview](ARCHITECTURE.md)** - Detailed system architecture and design patterns
+- **[Quick Start Guide](QUICKSTART.md)** - Get up and running quickly
+- **[Troubleshooting](TROUBLESHOOTING.md)** - Common issues and solutions
+
 ## Quick Start with Docker
 
 1. **Clone the repository** (if applicable) or navigate to the project directory
