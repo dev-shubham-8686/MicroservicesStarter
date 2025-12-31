@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using OrderService.Data;
 using OrderService.Models;
 using Shared.Contracts.Events;
+using Shared.Contracts.DTOs;
+using Shared.Infrastructure.Exceptions;
 
 namespace OrderService.Services;
 
@@ -37,22 +39,35 @@ public class OrderService : IOrderService
             .ToListAsync();
     }
 
-    public async Task<Order?> GetByIdAsync(Guid id)
+    public async Task<Order> GetByIdAsync(Guid id)
     {
-        return await _context.Orders
+        var order = await _context.Orders
             .Include(o => o.Items)
             .FirstOrDefaultAsync(o => o.Id == id);
+
+        if (order == null)
+        {
+            throw new NotFoundException("Order", id);
+        }
+
+        return order;
     }
 
-    public async Task<Order> CreateAsync(Guid userId, List<CreateOrderItemDto> items)
+    public async Task<Order> CreateAsync(Guid userId, CreateOrderRequest request)
     {
+        if (request.Items == null || request.Items.Count == 0)
+        {
+            throw new BusinessRuleException(Shared.Contracts.Common.ErrorCodes.EmptyOrderItems,
+                "Order must contain at least one item");
+        }
+
         var order = new Order
         {
             Id = Guid.NewGuid(),
             UserId = userId,
             Status = "Pending",
             CreatedAt = DateTime.UtcNow,
-            Items = items.Select(i => new OrderItem
+            Items = request.Items.Select(i => new OrderItem
             {
                 Id = Guid.NewGuid(),
                 ProductId = i.ProductId,
@@ -73,7 +88,7 @@ public class OrderService : IOrderService
             UserId = userId,
             TotalAmount = order.TotalAmount,
             CreatedAt = order.CreatedAt,
-            Items = order.Items.Select(i => new OrderItemDto
+            Items = order.Items.Select(i => new Shared.Contracts.Events.OrderItemDto
             {
                 ProductId = i.ProductId,
                 Quantity = i.Quantity,
@@ -85,18 +100,15 @@ public class OrderService : IOrderService
         return order;
     }
 
-    public async Task<bool> UpdateStatusAsync(Guid id, string status)
+    public async Task UpdateStatusAsync(Guid id, string status)
     {
-        var order = await _context.Orders.FindAsync(id);
-        if (order == null)
-            return false;
+        var order = await GetByIdAsync(id); // This will throw NotFoundException if not found
 
         order.Status = status;
         order.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Order status updated: {OrderId}, Status: {Status}", id, status);
-        return true;
     }
 }
 

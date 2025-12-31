@@ -2,6 +2,7 @@ using IdentityService.Data;
 using IdentityService.Models;
 using Microsoft.EntityFrameworkCore;
 using Shared.Contracts.DTOs;
+using Shared.Infrastructure.Exceptions;
 using BCrypt.Net;
 
 namespace IdentityService.Services;
@@ -22,7 +23,7 @@ public class AuthService : IAuthService
         // Check if user already exists
         if (await _context.Users.AnyAsync(u => u.Email == request.Email))
         {
-            throw new InvalidOperationException("User with this email already exists");
+            throw new ConflictException("User with this email already exists");
         }
 
         // Create new user
@@ -79,9 +80,14 @@ public class AuthService : IAuthService
             .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(u => u.Email == request.Email);
 
-        if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        if (user == null)
         {
-            throw new UnauthorizedAccessException("Invalid email or password");
+            throw new UnauthorizedException("Invalid email or password");
+        }
+
+        if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        {
+            throw new UnauthorizedException("Invalid email or password");
         }
 
         var roles = await GetUserRolesAsync(user.Id);

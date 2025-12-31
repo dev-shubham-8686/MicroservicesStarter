@@ -1,4 +1,6 @@
 using OrderService.Models;
+using Shared.Contracts.DTOs;
+using Shared.Infrastructure.Exceptions;
 
 namespace OrderService.Services;
 
@@ -6,16 +8,9 @@ public interface IOrderService
 {
     Task<List<Order>> GetAllAsync();
     Task<List<Order>> GetByUserIdAsync(Guid userId);
-    Task<Order?> GetByIdAsync(Guid id);
-    Task<Order> CreateAsync(Guid userId, List<CreateOrderItemDto> items);
-    Task<bool> UpdateStatusAsync(Guid id, string status);
-}
-
-public class CreateOrderItemDto
-{
-    public Guid ProductId { get; set; }
-    public int Quantity { get; set; }
-    public decimal Price { get; set; }
+    Task<Order> GetByIdAsync(Guid id);
+    Task<Order> CreateAsync(Guid userId, CreateOrderRequest request);
+    Task UpdateStatusAsync(Guid id, string status);
 }
 
 

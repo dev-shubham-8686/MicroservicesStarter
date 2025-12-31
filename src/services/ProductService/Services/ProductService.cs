@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ProductService.Data;
 using ProductService.Models;
 using Shared.Contracts.Events;
+using Shared.Infrastructure.Exceptions;
 
 namespace ProductService.Services;
 
@@ -27,9 +28,14 @@ public class ProductService : IProductService
         return await _context.Products.ToListAsync();
     }
 
-    public async Task<Product?> GetByIdAsync(Guid id)
+    public async Task<Product> GetByIdAsync(Guid id)
     {
-        return await _context.Products.FindAsync(id);
+        var product = await _context.Products.FindAsync(id);
+        if (product == null)
+        {
+            throw new NotFoundException("Product", id);
+        }
+        return product;
     }
 
     public async Task<Product> CreateAsync(Product product)
@@ -54,11 +60,13 @@ public class ProductService : IProductService
         return product;
     }
 
-    public async Task<Product?> UpdateAsync(Guid id, Product product)
+    public async Task<Product> UpdateAsync(Guid id, Product product)
     {
         var existingProduct = await _context.Products.FindAsync(id);
         if (existingProduct == null)
-            return null;
+        {
+            throw new NotFoundException("Product", id);
+        }
 
         existingProduct.Name = product.Name;
         existingProduct.Description = product.Description;
@@ -71,30 +79,34 @@ public class ProductService : IProductService
         return existingProduct;
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    public async Task DeleteAsync(Guid id)
     {
         var product = await _context.Products.FindAsync(id);
         if (product == null)
-            return false;
+        {
+            throw new NotFoundException("Product", id);
+        }
 
         _context.Products.Remove(product);
         await _context.SaveChangesAsync();
         _logger.LogInformation("Product deleted: {ProductId}", id);
-        return true;
     }
 
-    public async Task<bool> UpdateStockAsync(Guid id, int quantity)
+    public async Task UpdateStockAsync(Guid id, int quantity)
     {
-        var product = await _context.Products.FindAsync(id);
-        if (product == null)
-            return false;
+        var product = await GetByIdAsync(id); // This will throw NotFoundException if not found
 
         product.Stock += quantity;
+        if (product.Stock < 0)
+        {
+            throw new BusinessRuleException(Shared.Contracts.Common.ErrorCodes.InsufficientStock,
+                "Stock cannot be negative");
+        }
+
         product.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
         
         _logger.LogInformation("Product stock updated: {ProductId}, New Stock: {Stock}", id, product.Stock);
-        return true;
     }
 }
 
