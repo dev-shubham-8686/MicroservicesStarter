@@ -50,3 +50,4 @@ else
     echo "4. Try restarting: docker-compose restart sqlserver"
 fi
 
+

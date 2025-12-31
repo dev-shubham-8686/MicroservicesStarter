@@ -28,3 +28,4 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
 
+

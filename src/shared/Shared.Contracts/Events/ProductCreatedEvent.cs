@@ -9,3 +9,4 @@ public class ProductCreatedEvent
     public DateTime CreatedAt { get; set; }
 }
 
+

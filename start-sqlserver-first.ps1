@@ -94,3 +94,4 @@ Write-Host "To check SQL Server: docker-compose logs sqlserver" -ForegroundColor
 Write-Host "To stop: docker-compose down" -ForegroundColor Yellow
 Write-Host ""
 
+

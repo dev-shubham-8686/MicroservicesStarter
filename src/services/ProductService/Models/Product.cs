@@ -11,3 +11,4 @@ public class Product
     public DateTime? UpdatedAt { get; set; }
 }
 
+

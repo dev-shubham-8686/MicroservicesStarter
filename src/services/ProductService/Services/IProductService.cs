@@ -12,3 +12,4 @@ public interface IProductService
     Task<bool> UpdateStockAsync(Guid id, int quantity);
 }
 
+

@@ -43,3 +43,4 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "4. Try restarting: docker-compose restart sqlserver"
 }
 
+

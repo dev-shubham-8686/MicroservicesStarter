@@ -43,3 +43,4 @@ echo "To view logs: docker-compose logs -f [service-name]"
 echo "To stop: docker-compose down"
 echo ""
 
+
