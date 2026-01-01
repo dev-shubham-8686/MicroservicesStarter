@@ -32,6 +32,7 @@ This solution consists of the following microservices:
 
 ## 📚 Documentation
 
+- **[Complete CI/CD Pipeline Guide](CICD_GUIDE.md)** - Comprehensive guide for setting up, understanding, and using CI/CD pipelines with GitHub Actions (Beginner to Advanced)
 - **[Complete Docker & Architecture Guide](DOCKER_GUIDE.md)** - Comprehensive guide covering Docker fundamentals, Dockerfiles, Docker Compose, architecture, configuration, and troubleshooting (Beginner to Advanced)
 - **[Docker Quick Reference](DOCKER_QUICK_REFERENCE.md)** - Quick reference card for common Docker commands and configurations
 - **[Architecture Overview](ARCHITECTURE.md)** - Detailed system architecture and design patterns

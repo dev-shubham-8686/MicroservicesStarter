@@ -1,0 +1,78 @@
+name: Manual Deployment
+
+# This workflow allows manual deployment to different environments
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: 'Docker image version/tag'
+        required: true
+        default: 'latest'
+      services:
+        description: 'Services to deploy (comma-separated, leave empty for all)'
+        required: false
+        default: ''
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Display deployment info
+      run: |
+        echo "🚀 Deployment Configuration:"
+        echo "Environment: ${{ inputs.environment }}"
+        echo "Version: ${{ inputs.version }}"
+        echo "Services: ${{ inputs.services || 'all' }}"
+        
+    - name: Validate deployment
+      run: |
+        if [ "${{ inputs.environment }}" == "production" ]; then
+          echo "⚠️  Production deployment requires approval"
+        fi
+        
+    - name: Pull Docker images
+      run: |
+        echo "Pulling images for version: ${{ inputs.version }}"
+        # Add commands to pull images from registry
+        
+    - name: Deploy services
+      run: |
+        echo "Deploying services..."
+        # Add your deployment commands here
+        # Examples:
+        # - kubectl apply -f k8s/
+        # - docker-compose -f docker-compose.prod.yml up -d
+        # - az containerapp update ...
+        
+    - name: Wait for deployment
+      run: |
+        echo "Waiting for services to be ready..."
+        sleep 30
+        
+    - name: Health check
+      run: |
+        echo "Running health checks..."
+        # Add health check commands
+        
+    - name: Deployment summary
+      if: always()
+      run: |
+        echo "✅ Deployment to ${{ inputs.environment }} completed!"
+        echo "Version: ${{ inputs.version }}"
+

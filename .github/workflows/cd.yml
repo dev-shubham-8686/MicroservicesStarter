@@ -1,0 +1,243 @@
+name: CD Pipeline
+
+# This workflow runs on push to main branch and creates releases
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.0
+  workflow_dispatch:  # Allows manual triggering
+
+# Environment variables
+env:
+  REGISTRY: ghcr.io  # GitHub Container Registry
+  DOTNET_VERSION: '8.0.x'
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  # Job 1: Determine version and create release
+  version:
+    name: Determine Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for version calculation
+        
+    - name: Calculate version
+      id: version
+      run: |
+        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          # Use tag version
+          VERSION=${GITHUB_REF#refs/tags/v}
+          TAG=${GITHUB_REF#refs/tags/}
+        else
+          # Use commit SHA for versioning
+          VERSION=$(date +'%Y%m%d')-${GITHUB_SHA::8}
+          TAG=latest
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+        echo "Tag: $TAG"
+
+  # Job 2: Build and push Docker images
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    needs: version
+    permissions:
+      contents: read
+      packages: write
+    
+    strategy:
+      matrix:
+        service:
+          - name: identityservice
+            dockerfile: src/services/IdentityService/Dockerfile
+          - name: productservice
+            dockerfile: src/services/ProductService/Dockerfile
+          - name: orderservice
+            dockerfile: src/services/OrderService/Dockerfile
+          - name: apigateway
+            dockerfile: src/gateway/ApiGateway/Dockerfile
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ matrix.service.name }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=raw,value=${{ needs.version.outputs.tag }}
+          type=sha,prefix={{branch}}-
+          
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ${{ matrix.service.dockerfile }}
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          BUILD_DATE=${{ github.event.head_commit.timestamp }}
+          VCS_REF=${{ github.sha }}
+          VERSION=${{ needs.version.outputs.version }}
+          
+    - name: Image digest
+      run: echo "Image pushed with digest: ${{ steps.build.outputs.digest }}"
+
+  # Job 3: Update docker-compose with new image tags
+  update-compose:
+    name: Update Docker Compose
+    runs-on: ubuntu-latest
+    needs: [version, build-and-push]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Create production docker-compose
+      run: |
+        # This step would update docker-compose.yml with new image tags
+        # For now, we'll just create a note
+        echo "Production images built and tagged:"
+        echo "- identityservice:${{ needs.version.outputs.tag }}"
+        echo "- productservice:${{ needs.version.outputs.tag }}"
+        echo "- orderservice:${{ needs.version.outputs.tag }}"
+        echo "- apigateway:${{ needs.version.outputs.tag }}"
+        
+    - name: Upload production config
+      uses: actions/upload-artifact@v4
+      with:
+        name: production-config
+        path: docker-compose.yml
+        retention-days: 30
+
+  # Job 4: Deploy to staging (if configured)
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-and-push, update-compose]
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: staging
+      url: https://staging.example.com  # Update with your staging URL
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to staging
+      run: |
+        echo "🚀 Deploying to staging environment..."
+        echo "Version: ${{ needs.version.outputs.version }}"
+        echo "Tag: ${{ needs.version.outputs.tag }}"
+        # Add your deployment commands here
+        # Example: kubectl apply, docker-compose up, etc.
+
+  # Job 5: Run smoke tests after deployment
+  smoke-tests:
+    name: Smoke Tests
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Wait for services to be ready
+      run: |
+        echo "Waiting for services to start..."
+        sleep 30
+        
+    - name: Run smoke tests
+      run: |
+        echo "Running smoke tests..."
+        # Add your smoke test commands here
+        # Example: curl health endpoints, test API endpoints
+        
+    - name: Health check - API Gateway
+      run: |
+        curl -f https://staging.example.com/health || exit 1
+        
+    - name: Health check - Identity Service
+      run: |
+        curl -f https://staging.example.com/api/auth/health || exit 1
+
+  # Job 6: Create GitHub Release (for tags)
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+      
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Release ${{ github.ref_name }}
+        body: |
+          ## 🚀 Release ${{ github.ref_name }}
+          
+          ### Docker Images
+          - `${{ env.REGISTRY }}/${{ github.repository_owner }}/identityservice:${{ github.ref_name }}`
+          - `${{ env.REGISTRY }}/${{ github.repository_owner }}/productservice:${{ github.ref_name }}`
+          - `${{ env.REGISTRY }}/${{ github.repository_owner }}/orderservice:${{ github.ref_name }}`
+          - `${{ env.REGISTRY }}/${{ github.repository_owner }}/apigateway:${{ github.ref_name }}`
+          
+          ### Changes
+          See commit history for details.
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Summary job
+  cd-summary:
+    name: CD Summary
+    runs-on: ubuntu-latest
+    needs: [version, build-and-push, update-compose, deploy-staging, smoke-tests]
+    if: always()
+    
+    steps:
+    - name: CD Pipeline Status
+      run: |
+        echo "✅ CD Pipeline completed!"
+        echo "Version: ${{ needs.version.outputs.version }}"
+        echo "Tag: ${{ needs.version.outputs.tag }}"
+        echo "Build and Push: ${{ needs.build-and-push.result }}"
+        echo "Deploy Staging: ${{ needs.deploy-staging.result }}"
+        echo "Smoke Tests: ${{ needs.smoke-tests.result }}"
+
