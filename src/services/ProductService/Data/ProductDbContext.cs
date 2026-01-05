@@ -11,6 +11,11 @@ public class ProductDbContext : DbContext
 
     public DbSet<Product> Products { get; set; }
 
+    // New business tables (loosely coupled, no strong FKs)
+    public DbSet<InventoryMovement> InventoryMovements { get; set; }
+    public DbSet<StockReservation> StockReservations { get; set; }
+    public DbSet<ProductReview> ProductReviews { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

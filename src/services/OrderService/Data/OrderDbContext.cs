@@ -12,6 +12,15 @@ public class OrderDbContext : DbContext
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
 
+    // New business tables (loosely coupled, no strong FKs)
+    public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
+    public DbSet<Refund> Refunds { get; set; }
+    public DbSet<Shipment> Shipments { get; set; }
+    public DbSet<ShipmentTrackingHistory> ShipmentTrackingHistory { get; set; }
+    public DbSet<Coupon> Coupons { get; set; }
+    public DbSet<CouponUsage> CouponUsages { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

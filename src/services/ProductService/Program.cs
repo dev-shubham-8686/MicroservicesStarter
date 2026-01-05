@@ -76,6 +76,7 @@ builder.Services.AddRabbitMQ(builder.Configuration);
 
 // Application Services
 builder.Services.AddScoped<IProductService, ProductService.Services.ProductService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
 
 // Health Checks
 builder.Services.AddHealthChecks()

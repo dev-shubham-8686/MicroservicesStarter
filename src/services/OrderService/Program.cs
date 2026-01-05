@@ -96,6 +96,8 @@ builder.Services.AddMassTransit(x =>
 
 // Application Services
 builder.Services.AddScoped<IOrderService, OrderService.Services.OrderService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<ICouponService, CouponService>();
 
 // Health Checks
 builder.Services.AddHealthChecks()
